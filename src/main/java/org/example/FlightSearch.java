@@ -1,12 +1,21 @@
 package org.example;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ch.qos.logback.classic.LoggerContext;
 
 import com.amadeus.Amadeus;
 import com.amadeus.Params;
 import com.amadeus.exceptions.ResponseException;
 import com.amadeus.resources.FlightOfferSearch;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.Scanner;
+
+
 
 public class FlightSearch {
     private static Amadeus amadeus = Amadeus
@@ -14,6 +23,11 @@ public class FlightSearch {
             .build();
 
     public static void main(String[] args){
+        // disable mongo console log
+        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+        ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("org.mongodb.driver");
+        rootLogger.setLevel(Level.OFF);
+
         UserDao userDao = new UserDao();
         FlightDao flightDao = new FlightDao();
 
