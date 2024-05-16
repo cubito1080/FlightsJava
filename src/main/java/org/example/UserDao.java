@@ -7,7 +7,6 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import com.mongodb.event.CommandListener;
 import org.bson.Document;
 
 import java.util.ArrayList;
@@ -153,7 +152,9 @@ public class UserDao {
         usersCollection.updateOne(Filters.eq("name", name), new Document("$push", new Document("flights", flightDoc)));
     }
 
-    public void removeFlightFromUser(String name, Document flightDoc) {
+    public void removeFlightFromUser(String name, String origin, String destination) {
+        Document flightDoc = createFlightDocument(new Flight(origin, destination, ""));
         usersCollection.updateOne(Filters.eq("name", name), new Document("$pull", new Document("flights", flightDoc)));
     }
+
 }

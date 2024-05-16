@@ -1,7 +1,4 @@
 package org.example;
-
-
-
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -11,6 +8,7 @@ public class BenchmarkRunner {
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
                 .include(FlightDaoBenchmark.class.getSimpleName())
+                .include(UserDaoBenchmark.class.getSimpleName())
                 .forks(1)
                 .build();
 

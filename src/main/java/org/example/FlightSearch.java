@@ -1,78 +1,75 @@
 package org.example;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import ch.qos.logback.classic.LoggerContext;
 
-import com.amadeus.Amadeus;
-import com.amadeus.Params;
-import com.amadeus.exceptions.ResponseException;
-import com.amadeus.resources.FlightOfferSearch;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
-import org.slf4j.LoggerFactory;
-
-import java.util.Arrays;
 import java.util.Scanner;
 
-
-
 public class FlightSearch {
-    private static Amadeus amadeus = Amadeus
-            .builder("fOAkvzrTMnEJLsL2r8FJqEkFZsU0AGuV", "I2ZrjKquCArEiAbv")
-            .build();
+    private static UserDao userDao = new UserDao();
+    private static FlightDao flightDao = new FlightDao();
 
     public static void main(String[] args){
-        // disable mongo console log
-        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-        ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("org.mongodb.driver");
-        rootLogger.setLevel(Level.OFF);
-
-        UserDao userDao = new UserDao();
-        FlightDao flightDao = new FlightDao();
-
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter user name: ");
-        String userName = scanner.nextLine();
-        System.out.print("Enter origin airport code (e.g., JFK): ");
-        String origin = scanner.nextLine().toUpperCase();
-        System.out.print("Enter destination airport code (e.g., LAX): ");
-        String destination = scanner.nextLine().toUpperCase();
-        System.out.print("Enter departure date (YYYY-MM-DD): ");
-        String departDate = scanner.nextLine();
-        System.out.print("Enter return date (YYYY-MM-DD): ");
-        String returnDate = scanner.nextLine();
-        System.out.print("Enter number of adults: ");
-        String adults = scanner.nextLine();
 
-        try {
-            FlightOfferSearch[] results = flights(origin, destination, departDate, adults, returnDate);
-            if (results.length > 0) {
-                System.out.println("Available flights found:");
-                for (FlightOfferSearch flight : results) {
-                    System.out.println("--------------------------------------------------");
-                    System.out.println("Price: " + flight.getPrice().getTotal() + " " + flight.getPrice().getCurrency());
-                    Flight newFlight = new Flight(origin, destination, String.valueOf(flight.getPrice().getTotal()));
-                    flightDao.saveFlight(newFlight); // Save the flight in the Flights collection
-                    userDao.addFlightToUser(userName, newFlight); // Add the flight to the user's flights
-                }
-            } else {
-                System.out.println("No flights available.");
+        while (true) {
+            System.out.println("1. Agregar un vuelo");
+            System.out.println("2. Eliminar un vuelo");
+            System.out.println("3. Ejecutar pruebas de rendimiento");
+            System.out.println("4. Salir");
+            System.out.print("Elige una opción: ");
+            int option = scanner.nextInt();
+            scanner.nextLine(); // consume newline
+
+            switch (option) {
+                case 1:
+                    // Agregar un vuelo
+                    System.out.print("Introduce el nombre del usuario: ");
+                    String userName = scanner.nextLine();
+                    System.out.print("Introduce el código del aeropuerto de origen (por ejemplo, JFK): ");
+                    String origin = scanner.nextLine().toUpperCase();
+                    System.out.print("Introduce el código del aeropuerto de destino (por ejemplo, LAX): ");
+                    String destination = scanner.nextLine().toUpperCase();
+                    System.out.print("Introduce el precio del vuelo: ");
+                    String price = scanner.nextLine();
+                    Flight newFlight = new Flight(origin, destination, price);
+                    flightDao.saveFlight(newFlight); // Guarda el vuelo en la colección de vuelos
+                    userDao.addFlightToUser(userName, newFlight); // Añade el vuelo a los vuelos del usuario
+                    break;
+                case 2:
+                    // Eliminar un vuelo
+                    System.out.print("Introduce el nombre del usuario: ");
+                    userName = scanner.nextLine();
+                    System.out.print("Introduce el código del aeropuerto de origen del vuelo: ");
+                    origin = scanner.nextLine().toUpperCase();
+                    System.out.print("Introduce el código del aeropuerto de destino del vuelo: ");
+                    destination = scanner.nextLine().toUpperCase();
+                    flightDao.deleteFlight(origin, destination); // Borra el vuelo de la colección de vuelos
+                    userDao.removeFlightFromUser(userName, origin, destination); // Borra el vuelo de los vuelos del usuario
+                    break;
+                case 3:
+                    // Ejecutar pruebas de rendimiento
+                    try {
+                        Options opt = new OptionsBuilder()
+                                .include(FlightDaoBenchmark.class.getSimpleName())
+                                .include(UserDaoBenchmark.class.getSimpleName())
+                                .forks(1)
+                                .build();
+                        new Runner(opt).run();
+                    } catch (RunnerException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case 4:
+                    // Salir
+                    System.out.println("Saliendo...");
+                    scanner.close();
+                    System.exit(0);
+                default:
+                    System.out.println("Opción no válida. Por favor, elige una opción del 1 al 4.");
             }
-        } catch (ResponseException e) {
-            System.err.println("Error fetching flights: " + e.getDescription());
         }
-
-        scanner.close();
-    }
-
-    public static FlightOfferSearch[] flights(String origin, String destination, String departDate, String adults, String returnDate) throws ResponseException {
-        return amadeus.shopping.flightOffersSearch.get(
-                Params.with("originLocationCode", origin)
-                        .and("destinationLocationCode", destination)
-                        .and("departureDate", departDate)
-                        .and("returnDate", returnDate)
-                        .and("adults", adults)
-                        .and("max", 3));
     }
 }

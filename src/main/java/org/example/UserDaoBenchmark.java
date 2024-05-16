@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
+
 public class UserDaoBenchmark {
 
     private UserDao userDao;
