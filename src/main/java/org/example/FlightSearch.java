@@ -4,6 +4,9 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import org.slf4j.LoggerFactory;
 
 import java.util.Scanner;
 
@@ -13,6 +16,10 @@ public class FlightSearch {
 
     public static void main(String[] args){
         Scanner scanner = new Scanner(System.in);
+        // Desactivar los registros de MongoDB
+        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+        ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("org.mongodb.driver");
+        rootLogger.setLevel(Level.OFF);
 
         while (true) {
             System.out.println("1. Agregar un vuelo");
