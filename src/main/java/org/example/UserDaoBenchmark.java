@@ -21,7 +21,7 @@ public class UserDaoBenchmark {
     @Setup
     public void setup() {
         userDao = new UserDao();
-        User user = new User("userName", new ArrayList<>());
+            User user = new User("jeronimo", new ArrayList<>());
         userDoc = userDao.createUserDocument(user);
     }
 
