@@ -5,12 +5,17 @@ import java.util.List;
 
 
 public class User {
+
     private final String name;
-    private final List<Flight> flights;
+    private List<Flight> flights;
 
     public User(String name) {
         this.name = name;
-        this.flights = new ArrayList<>();
+    }
+
+    public User(String name, List<Flight> flights) {
+        this.name = name;
+        this.flights = flights;
     }
 
     public void addFlight(Flight flight) {

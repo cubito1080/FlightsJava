@@ -1,13 +1,17 @@
 package org.example;
 
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.event.CommandListener;
 import org.bson.Document;
-import java.util.List;
+
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class UserDao {
@@ -15,7 +19,12 @@ public class UserDao {
     private final FlightDao flightDao; // Add a FlightDao instance
 
     public UserDao() {
-        MongoClient client = MongoClients.create("mongodb+srv://jerov79:wGgmDLK6wfam1x2F@cluster0.fua1xqd.mongodb.net/?retryWrites=true&w=majority"); // Adjust the URI as needed
+        // Configurar MongoClient con CommandListener
+        MongoClientSettings settings = MongoClientSettings.builder()
+                .applyConnectionString(new ConnectionString("mongodb+srv://jerov79:wGgmDLK6wfam1x2F@cluster0.fua1xqd.mongodb.net/?retryWrites=true&w=majority"))
+                .build();
+
+        MongoClient client = MongoClients.create(settings);
         MongoDatabase database = client.getDatabase("UserDB");
         usersCollection = database.getCollection("UsersCollection");
         flightDao = new FlightDao(); // Initialize the FlightDao instance
@@ -33,28 +42,32 @@ public class UserDao {
     }
 
     // Read All Users
-    public List<User> getAllUsers() {
-        List<User> userList = new ArrayList<>();
+    public List<String> getAllUserNames() {
+        List<String> userNames = new ArrayList<>();
         for (Document doc : usersCollection.find()) {
-            User user = new User(doc.getString("name"));
-            List<Document> flightsList = new ArrayList<>();
-            Object flights = doc.get("flights");
-            if (flights instanceof List) {
-                for (Object flightObj : (List<?>) flights) {
-                    if (flightObj instanceof Document) {
-                        Document flightDoc = (Document) flightObj;
-                        Flight flight = new Flight(
-                                flightDoc.getString("origin"),
-                                flightDoc.getString("destination"),
-                                flightDoc.getString("price")
-                        );
-                        user.addFlight(flight);
-                    }
+            userNames.add(doc.getString("name"));
+        }
+        return userNames;
+    }
+
+    // Read User Flights
+    public List<Flight> getUserFlights(String userName) {
+        Document userDoc = usersCollection.find(Filters.eq("name", userName)).first();
+        List<Flight> flights = new ArrayList<>();
+        if (userDoc != null) {
+            List<Document> flightDocs = (List<Document>) userDoc.get("flights");
+            if (flightDocs != null) {
+                for (Document flightDoc : flightDocs) {
+                    Flight flight = new Flight(
+                            flightDoc.getString("origin"),
+                            flightDoc.getString("destination"),
+                            flightDoc.getString("price")
+                    );
+                    flights.add(flight);
                 }
             }
-            userList.add(user);
         }
-        return userList;
+        return flights;
     }
 
     // Update User
@@ -89,5 +102,58 @@ public class UserDao {
                 .append("price", flight.getPrice());
         usersCollection.updateOne(Filters.eq("name", name), new Document("$pull", new Document("flights", flightDoc)));
         flightDao.deleteFlight(flight.getOrigin(), flight.getDestination()); // Delete the flight using FlightDao
+    }
+
+
+    public Document createUserDocument(User user) {
+        return new Document("name", user.getName())
+                .append("flights", user.getFlights().stream()
+                        .map(flightDao::createFlightDocument)
+                        .collect(Collectors.toList()));
+    }
+
+    public void insertUser(Document doc) {
+        usersCollection.insertOne(doc);
+    }
+
+    public List<Document> findAllUsers() {
+        List<Document> docs = new ArrayList<>();
+        for (Document doc : usersCollection.find()) {
+            docs.add(doc);
+        }
+        return docs;
+    }
+
+    public Document findUser(String userName) {
+        return usersCollection.find(Filters.eq("name", userName)).first();
+    }
+
+    public Document createUpdatedUserDocument(User updatedUser) {
+        return new Document("name", updatedUser.getName())
+                .append("flights", updatedUser.getFlights().stream()
+                        .map(flightDao::createFlightDocument)
+                        .collect(Collectors.toList()));
+    }
+
+    public void replaceUser(String name, Document updatedDoc) {
+        usersCollection.replaceOne(Filters.eq("name", name), updatedDoc);
+    }
+
+    public void removeUser(String name) {
+        usersCollection.deleteOne(Filters.eq("name", name));
+    }
+
+    public Document createFlightDocument(Flight flight) {
+        return new Document("origin", flight.getOrigin())
+                .append("destination", flight.getDestination())
+                .append("price", flight.getPrice());
+    }
+
+    public void addFlightToUser(String name, Document flightDoc) {
+        usersCollection.updateOne(Filters.eq("name", name), new Document("$push", new Document("flights", flightDoc)));
+    }
+
+    public void removeFlightFromUser(String name, Document flightDoc) {
+        usersCollection.updateOne(Filters.eq("name", name), new Document("$pull", new Document("flights", flightDoc)));
     }
 }
